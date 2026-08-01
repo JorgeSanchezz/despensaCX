@@ -1,0 +1,25 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Tema Base compatible (Noche) -->
+    <style name="Base.Theme.DespensaCX" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Colores Primarios para Modo Oscuro -->
+        <item name="colorPrimary">#A5D6A7</item>
+        <item name="colorOnPrimary">#1B5E20</item>
+        <item name="colorPrimaryContainer">#2E7D32</item>
+
+        <!-- Colores Secundarios -->
+        <item name="colorSecondary">#80CBC4</item>
+        <item name="colorOnSecondary">#004D40</item>
+
+        <!-- Fondos y Superficies -->
+        <item name="android:colorBackground">#121212</item>
+        <item name="colorSurface">#1E1E1E</item>
+        <item name="colorOnSurface">#E0E0E0</item>
+
+        <!-- Barra de Estado -->
+        <item name="android:statusBarColor">#121212</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Tema principal usado por el Manifest -->
+    <style name="Theme.DespensaCX" parent="Base.Theme.DespensaCX" />
+</resources>
