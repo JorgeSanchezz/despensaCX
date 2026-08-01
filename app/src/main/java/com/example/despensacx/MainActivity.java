@@ -1,7 +1,9 @@
 package com.example.despensacx;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Canvas;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -11,6 +13,8 @@ import android.widget.EditText;
 import android.widget.PopupMenu;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,7 +26,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.despensacx.databinding.ActivityMainBinding;
 import com.google.android.material.snackbar.Snackbar;
 
-import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,6 +40,38 @@ public class MainActivity extends AppCompatActivity implements ListaAdapter.OnLi
     private ListaAdapter adapter;
     private List<ListaEntity> listaOriginal = new ArrayList<>();
     private int ordenActual = 0; // 0: Fecha, 1: Alfabetico, 2: Presupuesto
+
+    // Lanzador para Exportación (SAF Create Document)
+    private final ActivityResultLauncher<Intent> exportarJsonLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    Uri uri = result.getData().getData();
+                    if (uri != null) {
+                        AppDatabase.databaseWriteExecutor.execute(() -> {
+                            boolean ok = BackupHelper.exportarJSONToUri(this, uri);
+                            runOnUiThread(() ->
+                                    Toast.makeText(this, ok ? "Respaldo guardado correctamente" : "Error al guardar respaldo", Toast.LENGTH_SHORT).show()
+                            );
+                        });
+                    }
+                }
+            });
+
+    // Lanzador para Importación (SAF Open Document)
+    private final ActivityResultLauncher<Intent> importarJsonLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    Uri uri = result.getData().getData();
+                    if (uri != null) {
+                        AppDatabase.databaseWriteExecutor.execute(() -> {
+                            boolean ok = BackupHelper.importarJSONFromUri(this, uri);
+                            runOnUiThread(() ->
+                                    Toast.makeText(this, ok ? "Respaldo restaurado con éxito" : "Error al leer respaldo", Toast.LENGTH_SHORT).show()
+                            );
+                        });
+                    }
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -182,20 +217,28 @@ public class MainActivity extends AppCompatActivity implements ListaAdapter.OnLi
         new AlertDialog.Builder(this)
                 .setTitle("Respaldo y Restauración")
                 .setItems(opciones, (dialog, which) -> {
-                    File file = new File(getExternalFilesDir(null), "respaldo_despensa.json");
                     if (which == 0) {
-                        AppDatabase.databaseWriteExecutor.execute(() -> {
-                            boolean ok = BackupHelper.exportarJSON(this, file);
-                            runOnUiThread(() -> Toast.makeText(this, ok ? "Exportado a: " + file.getAbsolutePath() : "Error al exportar", Toast.LENGTH_LONG).show());
-                        });
+                        abrirExportadorSAF();
                     } else {
-                        AppDatabase.databaseWriteExecutor.execute(() -> {
-                            boolean ok = BackupHelper.importarJSON(this, file);
-                            runOnUiThread(() -> Toast.makeText(this, ok ? "Importación exitosa" : "Error al importar", Toast.LENGTH_LONG).show());
-                        });
+                        abrirImportadorSAF();
                     }
                 })
                 .show();
+    }
+
+    private void abrirExportadorSAF() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE, BackupHelper.generarNombreDefectoRespaldo());
+        exportarJsonLauncher.launch(intent);
+    }
+
+    private void abrirImportadorSAF() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        importarJsonLauncher.launch(intent);
     }
 
     private void mostrarDialogoCrearLista(ListaEntity listaEditar) {

@@ -104,7 +104,7 @@ public class ProductoAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
         public void bind(DisplayItem item) {
             tvNombreTienda.setText(item.tiendaNombre);
-            tvSubtotalTienda.setText(String.format(Locale.getDefault(), "Subtotal: $%.2f", item.subtotalTienda));
+            tvSubtotalTienda.setText(String.format(Locale.getDefault(), "Subtotal: $%,.2f", item.subtotalTienda));
             try {
                 viewIndicatorColor.setBackgroundColor(Color.parseColor(item.tiendaColor));
             } catch (Exception e) {
@@ -131,10 +131,10 @@ public class ProductoAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         public void bind(ProductoConTienda pct, OnProductoActionListener listener) {
             ProductoEntity p = pct.getProducto();
             tvDescripcion.setText(p.getCantidad() + "x " + p.getDescripcion());
-            tvDetallePrecio.setText(String.format(Locale.getDefault(), "P.U.: $%.2f", p.getPrecio()));
+            tvDetallePrecio.setText(String.format(Locale.getDefault(), "P.U.: $%,.2f", p.getPrecio()));
 
             double total = p.getPrecio() * p.getCantidad();
-            tvImporteTotal.setText(String.format(Locale.getDefault(), "$%.2f", total));
+            tvImporteTotal.setText(String.format(Locale.getDefault(), "$%,.2f", total));
 
             // Evitar disparar listener al rebind
             cbSeleccionado.setOnCheckedChangeListener(null);

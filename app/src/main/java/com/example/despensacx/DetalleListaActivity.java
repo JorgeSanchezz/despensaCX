@@ -128,7 +128,7 @@ public class DetalleListaActivity extends AppCompatActivity implements ProductoA
             }
 
             adapter.setItems(itemsDisplay);
-            binding.tvGranTotal.setText(String.format(Locale.getDefault(), "$%.2f MXN", totalGeneral));
+            binding.tvGranTotal.setText(String.format(Locale.getDefault(), "$%,.2f MXN", totalGeneral));
             actualizarBarraPresupuesto(totalGeneral);
         });
     }
@@ -158,8 +158,6 @@ public class DetalleListaActivity extends AppCompatActivity implements ProductoA
                 binding.progressPresupuesto.setIndicatorColor(Color.parseColor("#2E7D32"));
             }
         } else {
-            binding.tvTextoPresupuesto.setText(String.format(Locale.getDefault(), "$%.2f MXN", totalAcumulado));
-            binding.tvEstadoPresupuesto.setText("SIN LÍMITE");
             binding.progressPresupuesto.setProgress(100);
             binding.progressPresupuesto.setIndicatorColor(Color.GRAY);
         }

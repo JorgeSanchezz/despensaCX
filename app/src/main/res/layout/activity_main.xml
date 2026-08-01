@@ -22,15 +22,16 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="?attr/colorSurface"
-            app:queryHint="Buscar por nombre o fecha..."
-            app:iconifiedByDefault="false" />
+            app:iconifiedByDefault="false"
+            app:queryHint="Buscar por nombre o fecha..." />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvListas"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="8dp"
+        android:clipToPadding="false"
+        android:paddingBottom="88dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton

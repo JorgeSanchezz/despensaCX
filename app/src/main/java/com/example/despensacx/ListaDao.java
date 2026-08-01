@@ -26,12 +26,15 @@ public interface ListaDao {
     @Query("SELECT * FROM listas WHERE id = :id LIMIT 1")
     LiveData<ListaEntity> getById(long id);
 
-    @Query("SELECT * FROM listas WHERE archivada = 0 ORDER BY id DESC")
-    LiveData<List<ListaEntity>> getListasActivas();
-
     @Query("SELECT * FROM listas WHERE archivada = 1 ORDER BY id DESC")
     LiveData<List<ListaEntity>> getListasArchivadas();
 
     @Query("SELECT * FROM listas")
     List<ListaEntity> getAllSync();
+
+    @Query("SELECT * FROM listas WHERE archivada = 0")
+    List<ListaEntity> getListasActivasSync();
+
+    @Query("SELECT * FROM listas WHERE archivada = 0")
+    LiveData<List<ListaEntity>> getListasActivas();
 }

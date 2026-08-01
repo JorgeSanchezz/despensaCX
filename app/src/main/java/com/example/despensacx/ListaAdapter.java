@@ -82,7 +82,7 @@ public class ListaAdapter extends RecyclerView.Adapter<ListaAdapter.ListaViewHol
 
             if (lista.getPresupuestoMaximo() > 0) {
                 tvPresupuesto.setVisibility(View.VISIBLE);
-                tvPresupuesto.setText(String.format(Locale.getDefault(), "Presupuesto: $%.2f MXN", lista.getPresupuestoMaximo()));
+                tvPresupuesto.setText(String.format(Locale.getDefault(), "Presupuesto: $%,.2f MXN", lista.getPresupuestoMaximo()));
             } else {
                 tvPresupuesto.setVisibility(View.GONE);
             }

@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="20dp">
 
+    <!-- Descripción del Producto -->
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -18,31 +20,34 @@
             android:inputType="textCapSentences" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Fila de Precio Unitario y Cantidad -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="12dp">
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
 
+        <!-- Precio Unitario -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Precio Unitario">
+            android:hint="Precio Unitario"
+            app:placeholderText="0.00">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etPrecioProducto"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="numberDecimal"
-                android:text="0.00" />
+                android:inputType="numberDecimal" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Cantidad -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:layout_marginStart="8dp"
+            android:layout_weight="1"
             android:hint="Cantidad">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -54,11 +59,12 @@
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
+    <!-- Selección de Tienda -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Tienda asignada:"
         android:layout_marginTop="12dp"
+        android:text="Tienda asignada:"
         android:textStyle="bold" />
 
     <Spinner
@@ -66,4 +72,5 @@
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginTop="4dp" />
+
 </LinearLayout>
