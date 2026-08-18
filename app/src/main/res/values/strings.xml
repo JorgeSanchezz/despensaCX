@@ -1,3 +1,15 @@
 <resources>
     <string name="app_name">despensaCX</string>
+    <string name="modificado_con_fecha">Modificado: %1$s</string>
+    <string name="presupuesto_formato">Presupuesto: %1$s</string>
+    <string name="total_formato">Total: %1$s</string>
+    <string name="restante_formato">Restante: %1$s</string>
+    <string name="creado_con_fecha">Creado: %1$s</string>
+    <string name="cantidad_descripcion">%1$dx %2$s</string>
+    <string name="subtotal_tienda">Subtotal: %1$s</string>
+    <string name="archivada_suffix"> (Archivada)</string>
+    <string name="excedido">¡EXCEDIDO!</string>
+    <string name="dentro_del_limite">DENTRO DEL LÍMITE</string>
+    <string name="error_respaldo">Error al guardar respaldo</string>
+    <string name="respaldo_ok">Respaldo guardado correctamente</string>
 </resources>
