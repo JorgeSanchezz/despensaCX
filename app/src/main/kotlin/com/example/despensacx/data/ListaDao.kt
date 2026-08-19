@@ -6,13 +6,13 @@ import androidx.room.*
 @Dao
 interface ListaDao {
     @Insert
-    fun insert(lista: ListaEntity): Long
+    suspend fun insert(lista: ListaEntity): Long
 
     @Update
-    fun update(lista: ListaEntity)
+    suspend fun update(lista: ListaEntity)
 
     @Delete
-    fun delete(lista: ListaEntity)
+    suspend fun delete(lista: ListaEntity)
 
     @Query("SELECT * FROM listas WHERE id = :id LIMIT 1")
     fun getByIdSync(id: Long): ListaEntity?
@@ -31,4 +31,7 @@ interface ListaDao {
 
     @Query("SELECT * FROM listas WHERE archivada = 0")
     fun getListasActivas(): LiveData<List<ListaEntity>>
+
+    @Query("DELETE FROM listas")
+    suspend fun deleteAll()
 }

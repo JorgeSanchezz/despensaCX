@@ -6,13 +6,13 @@ import androidx.room.*
 @Dao
 interface ProductoDao {
     @Insert
-    fun insert(producto: ProductoEntity): Long
+    suspend fun insert(producto: ProductoEntity): Long
 
     @Update
-    fun update(producto: ProductoEntity)
+    suspend fun update(producto: ProductoEntity)
 
     @Delete
-    fun delete(producto: ProductoEntity)
+    suspend fun delete(producto: ProductoEntity)
 
     @Query("SELECT * FROM productos WHERE listaId = :listaId")
     fun getProductosByLista(listaId: Long): LiveData<List<ProductoEntity>>
@@ -21,8 +21,11 @@ interface ProductoDao {
     fun getProductosByListaSync(listaId: Long): List<ProductoEntity>
 
     @Query("UPDATE productos SET seleccionado = :seleccionado WHERE listaId = :listaId")
-    fun setAllSeleccionadoSync(listaId: Long, seleccionado: Boolean)
+    suspend fun setAllSeleccionadoSync(listaId: Long, seleccionado: Boolean)
 
     @Query("SELECT * FROM productos")
     fun getAllSync(): List<ProductoEntity>
+
+    @Query("DELETE FROM productos")
+    suspend fun deleteAll()
 }

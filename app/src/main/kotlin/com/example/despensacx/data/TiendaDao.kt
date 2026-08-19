@@ -6,13 +6,13 @@ import androidx.room.*
 @Dao
 interface TiendaDao {
     @Insert
-    fun insert(tienda: TiendaEntity): Long
+    suspend fun insert(tienda: TiendaEntity): Long
 
     @Update
-    fun update(tienda: TiendaEntity)
+    suspend fun update(tienda: TiendaEntity)
 
     @Delete
-    fun delete(tienda: TiendaEntity)
+    suspend fun delete(tienda: TiendaEntity)
 
     @Query("SELECT * FROM tiendas ORDER BY orden ASC, nombre ASC")
     fun getAllTiendas(): LiveData<List<TiendaEntity>>
@@ -25,4 +25,7 @@ interface TiendaDao {
 
     @Query("SELECT COUNT(*) FROM productos WHERE tiendaId = :tiendaId")
     fun countProductosByTiendaSync(tiendaId: Long): Int
+
+    @Query("DELETE FROM tiendas")
+    suspend fun deleteAll()
 }

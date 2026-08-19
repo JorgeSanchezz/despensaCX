@@ -5,8 +5,9 @@ import android.net.Uri
 import android.util.Log
 import com.google.gson.Gson
 import java.io.*
-import java.text.SimpleDateFormat
 import java.util.*
+
+import kotlinx.coroutines.runBlocking
 
 object BackupHelper {
 
@@ -14,12 +15,12 @@ object BackupHelper {
         var listas: List<ListaEntity>? = null
         var tiendas: List<TiendaEntity>? = null
         var productos: List<ProductoEntity>? = null
+        var catalogo: List<CatalogoProducto>? = null
     }
 
     @JvmStatic
     fun generarNombreDefectoRespaldo(): String {
-        val fecha = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
-        return "respaldo_$fecha.json"
+        return "DespensaCX_Backup.json"
     }
 
     @JvmStatic
@@ -32,6 +33,7 @@ object BackupHelper {
                     container.listas = db.listaDao().getAllSync()
                     container.tiendas = db.tiendaDao().getAllTiendasSync()
                     container.productos = db.productoDao().getAllSync()
+                    container.catalogo = db.catalogoDao().getAllSync()
 
                     val json = Gson().toJson(container)
                     writer.write(json)
@@ -60,26 +62,38 @@ object BackupHelper {
                     val db = AppDatabase.getInstance(context)
                     val mapaTiendasOldToNew = mutableMapOf<Long, Long>()
 
-                    container.tiendas?.forEach { t ->
-                        val oldId = t.id
-                        t.id = 0
-                        val newId = db.tiendaDao().insert(t)
-                        mapaTiendasOldToNew[oldId] = newId
-                    }
+                    runBlocking {
+                        // Limpiar datos actuales para sobrescribir
+                        db.productoDao().deleteAll()
+                        db.listaDao().deleteAll()
+                        db.tiendaDao().deleteAll()
+                        db.catalogoDao().deleteAll()
 
-                    container.listas?.forEach { l ->
-                        val oldListaId = l.id
-                        l.id = 0
-                        val newListaId = db.listaDao().insert(l)
+                        container.catalogo?.forEach { cp ->
+                            db.catalogoDao().insert(cp)
+                        }
 
-                        container.productos?.forEach { p ->
-                            if (p.listaId == oldListaId) {
-                                p.id = 0
-                                p.listaId = newListaId
-                                val newTiendaId = mapaTiendasOldToNew[p.tiendaId]
-                                if (newTiendaId != null) {
-                                    p.tiendaId = newTiendaId
-                                    db.productoDao().insert(p)
+                        container.tiendas?.forEach { t ->
+                            val oldId = t.id
+                            t.id = 0
+                            val newId = db.tiendaDao().insert(t)
+                            mapaTiendasOldToNew[oldId] = newId
+                        }
+
+                        container.listas?.forEach { l ->
+                            val oldListaId = l.id
+                            l.id = 0
+                            val newListaId = db.listaDao().insert(l)
+
+                            container.productos?.forEach { p ->
+                                if (p.listaId == oldListaId) {
+                                    p.id = 0
+                                    p.listaId = newListaId
+                                    val newTiendaId = mapaTiendasOldToNew[p.tiendaId]
+                                    if (newTiendaId != null) {
+                                        p.tiendaId = newTiendaId
+                                        db.productoDao().insert(p)
+                                    }
                                 }
                             }
                         }

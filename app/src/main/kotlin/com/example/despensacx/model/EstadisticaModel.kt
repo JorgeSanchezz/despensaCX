@@ -11,6 +11,8 @@ class EstadisticaModel {
         val mesNombre: String,
         val mesAnioClave: String, // e.g. "2026-08"
         val totalMes: Double,
-        val gastosPorTienda: Map<String, Double>
+        val gastosPorTienda: Map<String, Double>,
+        val gastosPorCategoria: Map<String, Double> = emptyMap(),
+        var variacionMesAnterior: Double? = null // Porcentaje de cambio
     )
 }

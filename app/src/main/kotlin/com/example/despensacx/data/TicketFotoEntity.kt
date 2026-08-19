@@ -6,7 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "productos",
+    tableName = "ticket_fotos",
     foreignKeys = [
         ForeignKey(
             entity = ListaEntity::class,
@@ -18,21 +18,15 @@ import androidx.room.PrimaryKey
             entity = TiendaEntity::class,
             parentColumns = ["id"],
             childColumns = ["tiendaId"],
-            onDelete = ForeignKey.RESTRICT
+            onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [Index("listaId"), Index("tiendaId")]
 )
-data class ProductoEntity(
+data class TicketFotoEntity(
     @PrimaryKey(autoGenerate = true)
-    var id: Long = 0,
-    var listaId: Long,
-    var tiendaId: Long,
-    var descripcion: String,
-    var precio: Double,
-    var cantidad: Double,
-    var seleccionado: Boolean,
-    var barcode: String? = null,
-    var categoria: String = "GENERAL",
-    var unidad: String = "PZA"
+    val id: Long = 0,
+    val listaId: Long,
+    val tiendaId: Long,
+    val fotoPath: String
 )
