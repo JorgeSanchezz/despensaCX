@@ -14,6 +14,9 @@ interface TicketFotoDao {
     @Query("SELECT * FROM ticket_fotos WHERE listaId = :listaId")
     fun getFotosByLista(listaId: Long): LiveData<List<TicketFotoEntity>>
 
+    @Query("SELECT * FROM ticket_fotos")
+    fun getFotosByListaSync(): List<TicketFotoEntity>
+
     @Delete
     suspend fun delete(ticketFoto: TicketFotoEntity)
 

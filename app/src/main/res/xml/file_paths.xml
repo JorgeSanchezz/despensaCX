@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <cache-path name="shared_files" path="." />
-    <external-path name="external_files" path="." />
+    <cache-path name="my_cache" path="." />
+    <files-path name="ticket_photos" path="tickets/" />
+    <files-path name="membresia_photos" path="membresias/" />
 </paths>

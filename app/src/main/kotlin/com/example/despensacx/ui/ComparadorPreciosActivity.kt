@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
@@ -17,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -79,7 +81,8 @@ fun ComparadorPreciosScreen(viewModel: ComparadorPreciosViewModel, onBack: () ->
                 placeholder = { Text("Busca un producto (ej. Leche, Arroz)") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 shape = RoundedCornerShape(16.dp),
-                singleLine = true
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
             )
 
             if (resultados.isEmpty()) {

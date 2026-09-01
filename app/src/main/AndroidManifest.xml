@@ -36,6 +36,7 @@
         <activity android:name=".ui.EstadisticasActivity" android:exported="false" />
         <activity android:name=".ui.GestionCatalogoActivity" android:exported="false" />
         <activity android:name=".ui.ComparadorPreciosActivity" android:exported="false" />
+        <activity android:name=".ui.GestionMembresiasActivity" android:exported="false" />
 
         <!-- FileProvider para compartir archivos generados si aplica -->
         <provider

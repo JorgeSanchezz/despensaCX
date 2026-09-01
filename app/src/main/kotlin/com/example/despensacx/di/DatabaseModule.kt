@@ -7,6 +7,7 @@ import com.example.despensacx.data.ListaDao
 import com.example.despensacx.data.ProductoDao
 import com.example.despensacx.data.TiendaDao
 import com.example.despensacx.data.TicketFotoDao
+import com.example.despensacx.data.MembresiaDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -47,5 +48,10 @@ object DatabaseModule {
     @Provides
     fun provideTicketFotoDao(database: AppDatabase): TicketFotoDao {
         return database.ticketFotoDao()
+    }
+
+    @Provides
+    fun provideMembresiaDao(database: AppDatabase): MembresiaDao {
+        return database.membresiaDao()
     }
 }

@@ -18,7 +18,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,18 +28,22 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.example.despensacx.R
 import com.example.despensacx.data.AppDatabase
-import com.example.despensacx.data.BackupHelper
 import com.example.despensacx.data.ListaEntity
 import com.example.despensacx.ui.components.EmptyState
+import com.example.despensacx.ui.components.listas.ListaItem
+import com.example.despensacx.ui.components.listas.SwipeableListaItem
 import com.example.despensacx.ui.theme.DespensaCXTheme
+import com.example.despensacx.utils.ZipBackupHelper
 import com.example.despensacx.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -62,26 +68,26 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-    private val exportarJsonLauncher =
+    private val exportarZipLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
                 result.data?.data?.let { uri ->
                     AppDatabase.databaseWriteExecutor.execute {
-                        val ok = BackupHelper.exportarJSONToUri(this, uri)
+                        val ok = ZipBackupHelper.exportarRespaldoCompleto(this, uri)
                         runOnUiThread {
-                            Toast.makeText(this, if (ok) R.string.respaldo_ok else R.string.error_respaldo, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, if (ok) "Respaldo completo (.zip) exportado con éxito" else "Error al exportar respaldo", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
             }
         }
 
-    private val importarJsonLauncher =
+    private val importarRespaldoLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
                 result.data?.data?.let { uri ->
                     AppDatabase.databaseWriteExecutor.execute {
-                        val ok = BackupHelper.importarJSONFromUri(this, uri)
+                        val ok = ZipBackupHelper.importarRespaldo(this, uri)
                         runOnUiThread {
                             Toast.makeText(this, if (ok) "Respaldo restaurado con éxito" else "Error al leer respaldo", Toast.LENGTH_SHORT).show()
                         }
@@ -93,7 +99,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Pedir permiso de cámara al inicio si no se tiene
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
@@ -106,6 +111,7 @@ class MainActivity : ComponentActivity() {
                     onImport = { abrirImportadorSAF() },
                     onNavigateToTiendas = { startActivity(Intent(this, GestionTiendasActivity::class.java)) },
                     onNavigateToCatalogo = { startActivity(Intent(this, GestionCatalogoActivity::class.java)) },
+                    onNavigateToMembresias = { startActivity(Intent(this, GestionMembresiasActivity::class.java)) },
                     onNavigateToArchivados = { startActivity(Intent(this, ListasArchivadasActivity::class.java)) },
                     onNavigateToEstadisticas = { startActivity(Intent(this, EstadisticasActivity::class.java)) },
                     onNavigateToDetalle = { id ->
@@ -122,18 +128,19 @@ class MainActivity : ComponentActivity() {
     private fun abrirExportadorSAF() {
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/json"
-            putExtra(Intent.EXTRA_TITLE, BackupHelper.generarNombreDefectoRespaldo())
+            type = "application/zip"
+            putExtra(Intent.EXTRA_TITLE, ZipBackupHelper.generarNombreDefectoRespaldo())
         }
-        exportarJsonLauncher.launch(intent)
+        exportarZipLauncher.launch(intent)
     }
 
     private fun abrirImportadorSAF() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/json"
+            type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/zip", "application/json", "application/octet-stream"))
         }
-        importarJsonLauncher.launch(intent)
+        importarRespaldoLauncher.launch(intent)
     }
 }
 
@@ -145,6 +152,7 @@ fun MainScreen(
     onImport: () -> Unit,
     onNavigateToTiendas: () -> Unit,
     onNavigateToCatalogo: () -> Unit,
+    onNavigateToMembresias: () -> Unit,
     onNavigateToArchivados: () -> Unit,
     onNavigateToEstadisticas: () -> Unit,
     onNavigateToDetalle: (Long) -> Unit
@@ -197,8 +205,13 @@ fun MainScreen(
                         )
                         DropdownMenuItem(
                             text = { Text("Gestionar Catálogo") },
-                            leadingIcon = { Icon(Icons.Default.ListAlt, contentDescription = null) },
+                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = null) },
                             onClick = { showMenu = false; onNavigateToCatalogo() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Gestionar Membresías") },
+                            leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
+                            onClick = { showMenu = false; onNavigateToMembresias() }
                         )
                         DropdownMenuItem(
                             text = { Text("Listas Archivadas") },
@@ -260,7 +273,8 @@ fun MainScreen(
                     }
                 },
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                singleLine = true
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
             )
 
             if (listasActivas.isEmpty() && searchQuery.isEmpty()) {
@@ -340,12 +354,12 @@ fun MainScreen(
                     TextButton(onClick = { showBackupDialog = false; onExport() }, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.FileUpload, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Exportar Respaldo (JSON)")
+                        Text("Exportar Respaldo Completo (.zip)")
                     }
                     TextButton(onClick = { showBackupDialog = false; onImport() }, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.FileDownload, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Importar Respaldo (JSON)")
+                        Text("Importar Respaldo (.zip o .json)")
                     }
                 }
             },
@@ -372,7 +386,8 @@ fun MainScreen(
                         onValueChange = { nombre = it },
                         label = { Text("Nombre de la lista") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
                     )
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
@@ -381,7 +396,8 @@ fun MainScreen(
                         label = { Text("Presupuesto Máximo (opcional)") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                        prefix = { Text("$ ") }
+                        prefix = { Text("$ ") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                 }
             },
@@ -442,147 +458,5 @@ fun MainScreen(
                 TextButton(onClick = { showDuplicateConfirm = null }) { Text("Cancelar") }
             }
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SwipeableListaItem(
-    lista: ListaEntity,
-    onClick: () -> Unit,
-    onEditar: (ListaEntity) -> Unit,
-    onDuplicar: (ListaEntity) -> Unit,
-    onEliminar: (ListaEntity) -> Unit,
-    onArchivar: (ListaEntity) -> Unit
-) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    onArchivar(lista)
-                    false
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    onEliminar(lista)
-                    false
-                }
-                else -> false
-            }
-        }
-    )
-
-    SwipeToDismissBox(
-        state = dismissState,
-        backgroundContent = {
-            val color = when (dismissState.dismissDirection) {
-                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF4CAF50)
-                SwipeToDismissBoxValue.EndToStart -> Color(0xFFF44336)
-                else -> Color.Transparent
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                    .background(color, androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),
-                contentAlignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
-            ) {
-                val icon = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Icons.Default.Archive else Icons.Default.Delete
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-        },
-        content = {
-            ListaItem(lista, onClick, onEditar, onDuplicar, onEliminar)
-        }
-    )
-}
-
-@Composable
-fun ListaItem(
-    lista: ListaEntity,
-    onClick: () -> Unit,
-    onEditar: ((ListaEntity) -> Unit)? = null,
-    onDuplicar: ((ListaEntity) -> Unit)? = null,
-    onEliminar: (ListaEntity) -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-            .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val title = lista.nombre + if (lista.archivada) stringResource(R.string.archivada_suffix) else ""
-                Text(
-                    text = title, 
-                    fontSize = 20.sp, 
-                    fontWeight = FontWeight.Bold, 
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Icon(
-                    Icons.Default.ChevronRight, 
-                    contentDescription = null, 
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                )
-            }
-            
-            Spacer(Modifier.height(4.dp))
-            
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color.Gray)
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = lista.fechaCreacion,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-            }
-
-            if (lista.presupuestoMaximo > 0) {
-                Spacer(Modifier.height(8.dp))
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = String.format(Locale.getDefault(), "Presupuesto: $%,.2f MXN", lista.presupuestoMaximo),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                if (onEditar != null) {
-                    IconButton(onClick = { onEditar(lista) }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.secondary)
-                    }
-                }
-                if (onDuplicar != null) {
-                    IconButton(onClick = { onDuplicar(lista) }) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = "Duplicar", tint = MaterialTheme.colorScheme.secondary)
-                    }
-                }
-                IconButton(onClick = { onEliminar(lista) }) {
-                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
-                }
-            }
-        }
     }
 }
