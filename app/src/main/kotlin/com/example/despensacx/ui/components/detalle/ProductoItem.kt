@@ -1,6 +1,5 @@
 package com.example.despensacx.ui.components.detalle
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,7 +38,6 @@ fun ProductoItem(
     // Jerarquía de opacidad
     val itemAlpha = when {
         !p.seleccionado -> 0.5f
-        sinPrecio -> 0.75f
         else -> 1.0f
     }
     
@@ -52,16 +50,12 @@ fun ProductoItem(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = when {
-                !p.seleccionado -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                sinPrecio -> MaterialTheme.colorScheme.surface
-                else -> MaterialTheme.colorScheme.surface
-            }
+            containerColor = if (!p.seleccionado) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (p.seleccionado || sinPrecio) 0.dp else 3.dp
+            defaultElevation = if (p.seleccionado) 0.dp else 2.dp
         ),
-        border = if (sinPrecio && p.seleccionado) BorderStroke(1.dp, Color.Red.copy(alpha = 0.5f)) else null
+        border = null
     ) {
         Row(
             modifier = Modifier
@@ -104,15 +98,14 @@ fun ProductoItem(
                     fontSize = if (compactMode) 20.sp else 16.sp,
                     textDecoration = textDecoration,
                     modifier = Modifier.alpha(itemAlpha),
-                    color = if (sinPrecio && p.seleccionado) Color.Red else MaterialTheme.colorScheme.onSurface
+                    color = if (sinPrecio) Color.Red else MaterialTheme.colorScheme.onSurface
                 )
                 if (!compactMode) {
                     Text(
-                        text = if (sinPrecio) "¡Poner Precio!" else "$cantStr $unidad x ${FormatUtils.formatCurrency(p.precio)}",
+                        text = "$cantStr $unidad x ${FormatUtils.formatCurrency(p.precio)}",
                         fontSize = 12.sp,
-                        color = if (sinPrecio) Color(0xFFE65100) else Color.Gray,
-                        fontWeight = if (sinPrecio) FontWeight.ExtraBold else FontWeight.Normal,
-                        modifier = Modifier.alpha(if (sinPrecio) 1f else itemAlpha)
+                        color = Color.Gray,
+                        modifier = Modifier.alpha(itemAlpha)
                     )
                 }
             }
@@ -121,10 +114,11 @@ fun ProductoItem(
                 Column(horizontalAlignment = Alignment.End) {
                     if (sinPrecio) {
                         Text(
-                            text = "$ ???",
-                            fontWeight = FontWeight.Black,
-                            color = Color(0xFFE65100),
-                            fontSize = 18.sp
+                            text = FormatUtils.formatCurrency(0.0),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            modifier = Modifier.alpha(itemAlpha),
+                            color = Color.Gray
                         )
                     } else {
                         Text(

@@ -16,12 +16,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.despensacx.R
 import com.example.despensacx.data.ListaEntity
+import com.example.despensacx.utils.FormatUtils
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeableListaItem(
     lista: ListaEntity,
+    total: Double = 0.0,
     onClick: () -> Unit,
     onEditar: (ListaEntity) -> Unit,
     onDuplicar: (ListaEntity) -> Unit,
@@ -69,7 +71,7 @@ fun SwipeableListaItem(
             }
         },
         content = {
-            ListaItem(lista, onClick, onEditar, onDuplicar, onEliminar)
+            ListaItem(lista, total, onClick, onEditar, onDuplicar, onEliminar)
         }
     )
 }
@@ -77,6 +79,7 @@ fun SwipeableListaItem(
 @Composable
 fun ListaItem(
     lista: ListaEntity,
+    total: Double = 0.0,
     onClick: () -> Unit,
     onEditar: ((ListaEntity) -> Unit)? = null,
     onDuplicar: ((ListaEntity) -> Unit)? = null,
@@ -110,13 +113,27 @@ fun ListaItem(
             
             Spacer(Modifier.height(4.dp))
             
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color.Gray)
-                Spacer(Modifier.width(4.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color.Gray)
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = lista.fechaCreacion,
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
                 Text(
-                    text = lista.fechaCreacion,
-                    fontSize = 12.sp,
-                    color = Color.Gray
+                    text = "Total: ${FormatUtils.formatCurrency(total)}",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (lista.presupuestoMaximo > 0 && total > lista.presupuestoMaximo) Color.Red else MaterialTheme.colorScheme.primary
                 )
             }
 

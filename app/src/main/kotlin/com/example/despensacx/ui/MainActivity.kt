@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
@@ -39,6 +40,7 @@ import androidx.core.content.ContextCompat
 import com.example.despensacx.R
 import com.example.despensacx.data.AppDatabase
 import com.example.despensacx.data.ListaEntity
+import com.example.despensacx.data.ListaResumen
 import com.example.despensacx.ui.components.EmptyState
 import com.example.despensacx.ui.components.listas.ListaItem
 import com.example.despensacx.ui.components.listas.SwipeableListaItem
@@ -159,6 +161,7 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     val listasActivas by viewModel.listasActivas.observeAsState(emptyList())
+    val resumenes by viewModel.resumenesListas.observeAsState(emptyMap())
     var searchQuery by remember { mutableStateOf("") }
     var ordenActual by remember { mutableIntStateOf(0) }
     var showMenu by remember { mutableStateOf(false) }
@@ -179,6 +182,16 @@ fun MainScreen(
                 2 -> it.sortedByDescending { l -> l.presupuestoMaximo }
                 else -> it
             }
+        }
+    }
+
+    val listState = rememberLazyListState()
+    var shouldScrollToTop by remember { mutableStateOf(false) }
+
+    LaunchedEffect(listasActivas) {
+        if (shouldScrollToTop) {
+            listState.animateScrollToItem(0)
+            shouldScrollToTop = false
         }
     }
 
@@ -285,12 +298,16 @@ fun MainScreen(
                 )
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 88.dp)
                 ) {
                     items(filtradas, key = { it.id }) { lista ->
+                        val resumen = resumenes[lista.id]
+                        val total = resumen?.let { if (it.totalSeleccionado > 0) it.totalSeleccionado else it.total } ?: 0.0
                         SwipeableListaItem(
                             lista = lista,
+                            total = total,
                             onClick = { onNavigateToDetalle(lista.id) },
                             onEditar = { listaParaEditar = it; showCreateDialog = true },
                             onDuplicar = { showDuplicateConfirm = it },
@@ -404,8 +421,17 @@ fun MainScreen(
             confirmButton = {
                 Button(onClick = {
                     if (nombre.isNotBlank()) {
+                        val esNueva = listaParaEditar == null
                         viewModel.guardarLista(listaParaEditar, nombre, presupuesto.toDoubleOrNull() ?: 0.0)
                         showCreateDialog = false
+                        if (esNueva) {
+                            ordenActual = 0
+                            searchQuery = ""
+                            shouldScrollToTop = true
+                            scope.launch {
+                                listState.animateScrollToItem(0)
+                            }
+                        }
                     }
                 }) {
                     Text("Guardar")
@@ -449,6 +475,12 @@ fun MainScreen(
                     onClick = {
                         viewModel.duplicarLista(showDuplicateConfirm!!)
                         showDuplicateConfirm = null
+                        ordenActual = 0
+                        searchQuery = ""
+                        shouldScrollToTop = true
+                        scope.launch {
+                            listState.animateScrollToItem(0)
+                        }
                     }
                 ) {
                     Text("Duplicar")

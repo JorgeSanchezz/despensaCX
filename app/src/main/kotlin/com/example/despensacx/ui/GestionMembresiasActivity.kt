@@ -1,8 +1,10 @@
 package com.example.despensacx.ui
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -11,6 +13,8 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,19 +23,28 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.RotateRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.example.despensacx.data.MembresiaEntity
@@ -222,24 +235,11 @@ fun GestionMembresiasScreen(
     }
 
     if (selectedMembresiaForView != null) {
-        AlertDialog(
-            onDismissRequest = { selectedMembresiaForView = null },
-            title = { 
-                val t = tiendas.find { it.id == selectedMembresiaForView!!.tiendaId }
-                Text(t?.nombre ?: "Membresía") 
-            },
-            text = {
-                Box(modifier = Modifier.fillMaxWidth().height(450.dp)) {
-                    AsyncImage(
-                        model = selectedMembresiaForView!!.fotoPath,
-                        contentDescription = "Foto membresía",
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { selectedMembresiaForView = null }) { Text("Cerrar") }
-            }
+        val t = tiendas.find { it.id == selectedMembresiaForView!!.tiendaId }
+        MembresiaViewerDialog(
+            fotoPath = selectedMembresiaForView!!.fotoPath,
+            tiendaNombre = t?.nombre ?: "Membresía",
+            onDismiss = { selectedMembresiaForView = null }
         )
     }
 
@@ -287,5 +287,130 @@ private fun copyUriToInternalStorage(context: android.content.Context, uri: Uri,
         Uri.fromFile(destFile)
     } catch (e: Exception) {
         null
+    }
+}
+
+@Composable
+fun MembresiaViewerDialog(
+    fotoPath: String,
+    tiendaNombre: String,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    // Maximizar el brillo de la pantalla mientras la ventana esté abierta
+    DisposableEffect(Unit) {
+        val activity = context as? Activity
+        val window = activity?.window
+        val layoutParams = window?.attributes
+        val originalBrightness = layoutParams?.screenBrightness ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        
+        layoutParams?.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
+        window?.attributes = layoutParams
+        
+        onDispose {
+            layoutParams?.screenBrightness = originalBrightness
+            window?.attributes = layoutParams
+        }
+    }
+
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var rotationAngle by remember { mutableFloatStateOf(0f) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            scale = (scale * zoom).coerceIn(0.8f, 5f)
+                            offset += pan
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onDoubleTap = {
+                                if (scale > 1f) {
+                                    scale = 1f
+                                    offset = Offset.Zero
+                                } else {
+                                    scale = 2.5f
+                                }
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = fotoPath,
+                    contentDescription = "Membresía $tiendaNombre",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            rotationZ = rotationAngle,
+                            translationX = offset.x,
+                            translationY = offset.y
+                        )
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = tiendaNombre,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    modifier = Modifier.weight(1f)
+                )
+
+                IconButton(onClick = { rotationAngle = (rotationAngle + 90f) % 360f }) {
+                    Icon(
+                        imageVector = Icons.Default.RotateRight,
+                        contentDescription = "Rotar 90°",
+                        tint = Color.White
+                    )
+                }
+
+                IconButton(onClick = {
+                    scale = 1f
+                    offset = Offset.Zero
+                    rotationAngle = 0f
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Restablecer",
+                        tint = Color.White
+                    )
+                }
+
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Cerrar",
+                        tint = Color.White
+                    )
+                }
+            }
+        }
     }
 }

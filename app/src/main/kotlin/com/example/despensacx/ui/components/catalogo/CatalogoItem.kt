@@ -7,8 +7,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -89,26 +92,73 @@ fun DialogCatalogo(
     var categoria by remember { mutableStateOf(producto?.categoria ?: "GENERAL") }
     var unidad by remember { mutableStateOf(producto?.unidad ?: "PZA") }
     var showScanner by remember { mutableStateOf(false) }
+    var torchEnabled by remember { mutableStateOf(false) }
 
     if (showScanner) {
         AlertDialog(
-            onDismissRequest = { showScanner = false },
+            onDismissRequest = { 
+                torchEnabled = false
+                showScanner = false 
+            },
             text = {
-                Box(modifier = Modifier.size(300.dp)) {
-                    BarcodeScannerView { code ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.Black)
+                ) {
+                    BarcodeScannerView(torchEnabled = torchEnabled) { code ->
                         barcode = code
+                        torchEnabled = false
                         showScanner = false
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                    ) {
+                        IconButton(
+                            onClick = { torchEnabled = !torchEnabled },
+                            colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Black.copy(alpha = 0.5f))
+                        ) {
+                            Icon(
+                                if (torchEnabled) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                                contentDescription = "Flash",
+                                tint = Color.White
+                            )
+                        }
+                        IconButton(
+                            onClick = { 
+                                torchEnabled = false
+                                showScanner = false 
+                            },
+                            colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Black.copy(alpha = 0.5f))
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White)
+                        }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showScanner = false }) { Text("Cerrar") }
+                TextButton(
+                    onClick = { 
+                        torchEnabled = false
+                        showScanner = false 
+                    }
+                ) { 
+                    Text("Cerrar") 
+                }
             }
         )
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            torchEnabled = false
+            onDismiss()
+        },
         title = { Text(if (producto == null) "Agregar al Catálogo" else "Editar Producto") },
         text = {
             Column {

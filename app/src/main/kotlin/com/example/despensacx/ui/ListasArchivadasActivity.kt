@@ -61,6 +61,7 @@ fun ListasArchivadasScreen(
     onNavigateToDetalle: (Long) -> Unit
 ) {
     val listasArchivadas by viewModel.listasArchivadas.observeAsState(emptyList())
+    val resumenes by viewModel.resumenesListas.observeAsState(emptyMap())
     var searchQuery by remember { mutableStateOf("") }
     var showDeleteConfirm by remember { mutableStateOf<ListaEntity?>(null) }
     var showRestoreConfirm by remember { mutableStateOf<ListaEntity?>(null) }
@@ -121,8 +122,11 @@ fun ListasArchivadasScreen(
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
                     items(filtradas, key = { it.id }) { lista ->
+                        val resumen = resumenes[lista.id]
+                        val total = resumen?.let { if (it.totalSeleccionado > 0) it.totalSeleccionado else it.total } ?: 0.0
                         ListaItem(
                             lista = lista,
+                            total = total,
                             onClick = { onNavigateToDetalle(lista.id) },
                             onEliminar = { showDeleteConfirm = lista }
                         )

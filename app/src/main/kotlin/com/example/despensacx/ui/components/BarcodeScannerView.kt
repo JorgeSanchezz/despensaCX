@@ -29,12 +29,29 @@ fun BarcodeScannerView(
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor: ExecutorService = remember { Executors.newSingleThreadExecutor() }
     var cameraControl: CameraControl? by remember { mutableStateOf(null) }
+    var cameraProvider: ProcessCameraProvider? by remember { mutableStateOf(null) }
     
     // Para validación por consenso (evitar falsos positivos)
     val detectionHistory = remember { mutableListOf<String>() }
 
-    LaunchedEffect(torchEnabled) {
-        cameraControl?.enableTorch(torchEnabled)
+    LaunchedEffect(torchEnabled, cameraControl) {
+        try {
+            cameraControl?.enableTorch(torchEnabled)
+        } catch (e: Exception) {
+            Log.e("ScannerView", "Error toggling torch", e)
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        onDispose {
+            try {
+                cameraControl?.enableTorch(false)
+                cameraProvider?.unbindAll()
+            } catch (e: Exception) {
+                Log.e("ScannerView", "Error turning off torch on dispose", e)
+            }
+            cameraExecutor.shutdown()
+        }
     }
 
     AndroidView(
@@ -48,7 +65,8 @@ fun BarcodeScannerView(
 
             val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
             cameraProviderFuture.addListener({
-                val cameraProvider = cameraProviderFuture.get()
+                val provider = cameraProviderFuture.get()
+                cameraProvider = provider
                 val preview = Preview.Builder().build().also {
                     it.setSurfaceProvider(previewView.surfaceProvider)
                 }
@@ -86,8 +104,8 @@ fun BarcodeScannerView(
                     }
 
                 try {
-                    cameraProvider.unbindAll()
-                    val camera = cameraProvider.bindToLifecycle(
+                    provider.unbindAll()
+                    val camera = provider.bindToLifecycle(
                         lifecycleOwner,
                         CameraSelector.DEFAULT_BACK_CAMERA,
                         preview,

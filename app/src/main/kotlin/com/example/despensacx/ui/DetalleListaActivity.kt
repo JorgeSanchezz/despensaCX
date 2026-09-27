@@ -159,6 +159,9 @@ fun DetalleListaScreen(
     var pendingTiendaIdForPhoto by remember { mutableLongStateOf(-1L) }
     var selectedPhotoViewer by remember { mutableStateOf<TicketFotoEntity?>(null) }
     var productoParaEditar by remember { mutableStateOf<ProductoEntity?>(null) }
+    var productoParaEliminar by remember { mutableStateOf<ProductoEntity?>(null) }
+    var showDeleteFotoConfirm by remember { mutableStateOf<TicketFotoEntity?>(null) }
+    var ultimoTiendaIdAgregado by remember { mutableStateOf<Long?>(null) }
     
     // Estado para colapsar/expandir tiendas
     val collapsedStores = remember { mutableStateMapOf<Long, Boolean>() }
@@ -451,7 +454,7 @@ fun DetalleListaScreen(
                                     showAddSheet = true
                                 },
                                 onEliminar = {
-                                    viewModel.eliminarProducto(it, listaActual)
+                                    productoParaEliminar = it
                                 }
                             )
                         }
@@ -461,11 +464,17 @@ fun DetalleListaScreen(
         }
     }
 
+    val defaultTiendaId = remember(ultimoTiendaIdAgregado, productos, tiendas) {
+        ultimoTiendaIdAgregado
+            ?: (if (productos.isNotEmpty()) productos.last().tiendaId else tiendas.firstOrNull()?.id ?: -1L)
+    }
+
     if (showAddSheet) {
         SheetProducto(
             producto = productoParaEditar,
             tiendas = tiendas,
             viewModel = viewModel,
+            defaultTiendaId = defaultTiendaId,
             onDismiss = { showAddSheet = false },
             onConfirm = { desc, precio, cant, tiendaId, barcode, categoria, unidad ->
                 viewModel.guardarProducto(
@@ -480,7 +489,30 @@ fun DetalleListaScreen(
                     categoria,
                     unidad
                 )
+                ultimoTiendaIdAgregado = tiendaId
                 showAddSheet = false
+            }
+        )
+    }
+
+    if (productoParaEliminar != null) {
+        AlertDialog(
+            onDismissRequest = { productoParaEliminar = null },
+            title = { Text("Eliminar producto") },
+            text = { Text("¿Deseas eliminar '${productoParaEliminar?.descripcion}' de la lista?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.eliminarProducto(productoParaEliminar!!, listaActual)
+                        productoParaEliminar = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { productoParaEliminar = null }) { Text("Cancelar") }
             }
         )
     }
@@ -598,13 +630,35 @@ fun DetalleListaScreen(
             dismissButton = {
                 TextButton(
                     onClick = {
-                        viewModel.eliminarFotoTicket(selectedPhotoViewer!!)
-                        selectedPhotoViewer = null
+                        showDeleteFotoConfirm = selectedPhotoViewer
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
                 ) {
                     Text("Eliminar Foto")
                 }
+            }
+        )
+    }
+
+    if (showDeleteFotoConfirm != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteFotoConfirm = null },
+            title = { Text("Eliminar foto del ticket") },
+            text = { Text("¿Deseas eliminar esta foto de ticket?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.eliminarFotoTicket(showDeleteFotoConfirm!!)
+                        showDeleteFotoConfirm = null
+                        selectedPhotoViewer = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteFotoConfirm = null }) { Text("Cancelar") }
             }
         )
     }

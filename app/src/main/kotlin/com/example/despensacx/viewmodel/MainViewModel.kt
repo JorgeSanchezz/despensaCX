@@ -2,18 +2,19 @@ package com.example.despensacx.viewmodel
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.map
+import androidx.lifecycle.viewModelScope
 import com.example.despensacx.data.AppDatabase
 import com.example.despensacx.data.ListaDao
 import com.example.despensacx.data.ListaEntity
+import com.example.despensacx.data.ListaResumen
 import com.example.despensacx.data.ProductoDao
 import com.example.despensacx.data.ProductoEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
-
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -22,6 +23,10 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
 
     val listasActivas: LiveData<List<ListaEntity>> = listaDao.getListasActivas()
+
+    val resumenesListas: LiveData<Map<Long, ListaResumen>> = productoDao.getResumenListas().map { list ->
+        list.associateBy { it.listaId }
+    }
 
     fun guardarLista(lista: ListaEntity?, nombre: String, presupuesto: Double) {
         val fecha = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())

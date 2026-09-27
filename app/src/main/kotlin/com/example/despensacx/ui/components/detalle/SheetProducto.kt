@@ -39,6 +39,7 @@ fun SheetProducto(
     producto: ProductoEntity?,
     tiendas: List<TiendaEntity>,
     viewModel: DetalleListaViewModel,
+    defaultTiendaId: Long? = null,
     onDismiss: () -> Unit,
     onConfirm: (String, Double, Double, Long, String?, String, String) -> Unit
 ) {
@@ -48,7 +49,11 @@ fun SheetProducto(
         val c = producto?.cantidad ?: 1.0
         mutableStateOf(if (c % 1.0 == 0.0) c.toInt().toString() else c.toString())
     }
-    var selectedTiendaId by remember { mutableStateOf(producto?.tiendaId ?: if (tiendas.isNotEmpty()) tiendas[0].id else -1L) }
+    val initialTiendaId = remember(producto, tiendas, defaultTiendaId) {
+        producto?.tiendaId
+            ?: (if (defaultTiendaId != null && tiendas.any { it.id == defaultTiendaId }) defaultTiendaId else tiendas.firstOrNull()?.id ?: -1L)
+    }
+    var selectedTiendaId by remember(initialTiendaId) { mutableLongStateOf(initialTiendaId) }
     var barcode by remember { mutableStateOf(producto?.barcode) }
     var categoria by remember { mutableStateOf(producto?.categoria ?: "GENERAL") }
     var unidad by remember { mutableStateOf(producto?.unidad ?: "PZA") }
@@ -61,7 +66,11 @@ fun SheetProducto(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            torchEnabled = false
+            showScanner = false
+            onDismiss()
+        },
         sheetState = sheetState,
         dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
@@ -90,6 +99,7 @@ fun SheetProducto(
                 ) {
                     BarcodeScannerView(torchEnabled = torchEnabled) { code ->
                         barcode = code
+                        torchEnabled = false
                         showScanner = false
                         scope.launch {
                             viewModel.buscarEnCatalogo(code)?.let {
@@ -117,7 +127,10 @@ fun SheetProducto(
                             )
                         }
                         IconButton(
-                            onClick = { showScanner = false },
+                            onClick = { 
+                                torchEnabled = false
+                                showScanner = false 
+                            },
                             colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Black.copy(alpha = 0.5f))
                         ) {
                             Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
