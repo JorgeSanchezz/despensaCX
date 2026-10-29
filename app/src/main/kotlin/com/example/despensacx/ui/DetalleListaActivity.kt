@@ -147,6 +147,11 @@ fun DetalleListaScreen(
     val tiendas by viewModel.getTiendas().observeAsState(emptyList())
     val productos by viewModel.getProductos(listaId).observeAsState(emptyList())
     val ticketFotos by viewModel.getTicketFotos(listaId).observeAsState(emptyList())
+    val totalesTiendaList by viewModel.getTotalesTienda(listaId).observeAsState(emptyList())
+
+    val totalesTiendaMap = remember(totalesTiendaList) {
+        totalesTiendaList.associate { it.tiendaId to it.totalManual }
+    }
 
     val context = LocalContext.current
     var showAddSheet by remember { mutableStateOf(false) }
@@ -160,8 +165,11 @@ fun DetalleListaScreen(
     var selectedPhotoViewer by remember { mutableStateOf<TicketFotoEntity?>(null) }
     var productoParaEditar by remember { mutableStateOf<ProductoEntity?>(null) }
     var productoParaEliminar by remember { mutableStateOf<ProductoEntity?>(null) }
+    var showEliminarSeleccionadosConfirm by remember { mutableStateOf(false) }
     var showDeleteFotoConfirm by remember { mutableStateOf<TicketFotoEntity?>(null) }
     var ultimoTiendaIdAgregado by remember { mutableStateOf<Long?>(null) }
+    var tiendaParaTotalManual by remember { mutableStateOf<TiendaEntity?>(null) }
+    var showListaTotalManualDialog by remember { mutableStateOf(false) }
     
     // Estado para colapsar/expandir tiendas
     val collapsedStores = remember { mutableStateMapOf<Long, Boolean>() }
@@ -188,11 +196,23 @@ fun DetalleListaScreen(
             val tienda = tiendas.find { it.id == p.tiendaId }
                 ?: TiendaEntity(nombre = "General", color = "#9E9E9E", fechaRegistro = "", orden = 99)
             ProductoConTienda(p, tienda)
-        }.groupBy { it.tienda.id }
+        }
+        .sortedWith(
+            compareBy<ProductoConTienda> { it.tienda.orden }
+                .thenBy { if (it.producto.precio > 0.0) 0 else 1 }
+                .thenBy { it.producto.id }
+        )
+        .groupBy { it.tienda.id }
     }
 
-    val totalGeneral = remember(productos) {
-        productos.filter { it.seleccionado }.sumOf { it.precio * it.cantidad }
+    val totalGeneral = remember(productos, totalesTiendaMap, listaActual, agrupado) {
+        if (listaActual?.totalManual != null) {
+            listaActual!!.totalManual!!
+        } else {
+            agrupado.entries.sumOf { (tiendaId, prods) ->
+                totalesTiendaMap[tiendaId] ?: prods.filter { it.producto.seleccionado }.sumOf { it.producto.precio * it.producto.cantidad }
+            }
+        }
     }
     
     val progreso = remember(productos, listaActual, totalGeneral) {
@@ -296,9 +316,12 @@ fun DetalleListaScreen(
                                 }
                                 if (lista.presupuestoMaximo > 0) {
                                     val excedido = totalGeneral > lista.presupuestoMaximo
-                                    Column(horizontalAlignment = Alignment.End) {
+                                    Column(
+                                        horizontalAlignment = Alignment.End,
+                                        modifier = Modifier.clickable { showListaTotalManualDialog = true }
+                                    ) {
                                         Text(
-                                            text = FormatUtils.formatCurrency(totalGeneral),
+                                            text = (if (lista.totalManual != null) "✏️ " else "") + FormatUtils.formatCurrency(totalGeneral),
                                             fontSize = 18.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = if (excedido) Color.Red else MaterialTheme.colorScheme.primary
@@ -339,6 +362,8 @@ fun DetalleListaScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val allSelected = productos.isNotEmpty() && productos.all { it.seleccionado }
+                        val hasSelectedProducts = productos.any { it.seleccionado }
+
                         Checkbox(
                             checked = allSelected,
                             onCheckedChange = { isChecked ->
@@ -346,6 +371,17 @@ fun DetalleListaScreen(
                             }
                         )
                         Text("Seleccionar todos", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
+
+                        if (hasSelectedProducts) {
+                            IconButton(onClick = { showEliminarSeleccionadosConfirm = true }) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Eliminar seleccionados",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+
                         TextButton(onClick = onShare) {
                             Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
@@ -374,18 +410,31 @@ fun DetalleListaScreen(
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { showListaTotalManualDialog = true }
+                        ) {
                             Text(
-                                text = "TOTAL SELECCIONADO",
+                                text = if (listaActual?.totalManual != null) "TOTAL MANUAL (LISTA)" else "TOTAL SELECCIONADO",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.Gray
                             )
-                            Text(
-                                text = FormatUtils.formatCurrency(totalGeneral),
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = (if (listaActual?.totalManual != null) "✏️ " else "") + FormatUtils.formatCurrency(totalGeneral),
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Editar total manual de la lista",
+                                    tint = Color.Gray,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -429,34 +478,39 @@ fun DetalleListaScreen(
 
                     stickyHeader {
                         val fotoTienda = ticketFotos.find { it.tiendaId == firstPct.tienda.id }
+                        val manualTiendaTotal = totalesTiendaMap[firstPct.tienda.id]
                         HeaderTienda(
                             nombre = firstPct.tienda.nombre,
                             color = firstPct.tienda.color,
                             subtotal = subtotalTienda,
+                            totalManual = manualTiendaTotal,
                             fotoTicket = fotoTienda,
                             compactMode = supermarketMode,
                             isCollapsed = isCollapsed,
                             onToggleCollapse = { collapsedStores[firstPct.tienda.id] = !isCollapsed },
-                            onVerFoto = { selectedPhotoViewer = it }
+                            onVerFoto = { selectedPhotoViewer = it },
+                            onEditTotalManual = { tiendaParaTotalManual = firstPct.tienda }
                         )
                     }
 
                     if (!isCollapsed) {
                         items(listaProds, key = { it.producto.id }) { pct ->
-                            ProductoItem(
-                                pct = pct,
-                                compactMode = supermarketMode,
-                                onToggle = { seleccionado ->
-                                    viewModel.toggleProducto(pct.producto, seleccionado, listaActual)
-                                },
-                                onEditar = {
-                                    productoParaEditar = it
-                                    showAddSheet = true
-                                },
-                                onEliminar = {
-                                    productoParaEliminar = it
-                                }
-                            )
+                            Box(modifier = Modifier.animateItemPlacement()) {
+                                ProductoItem(
+                                    pct = pct,
+                                    compactMode = supermarketMode,
+                                    onToggle = { seleccionado ->
+                                        viewModel.toggleProducto(pct.producto, seleccionado, listaActual)
+                                    },
+                                    onEditar = {
+                                        productoParaEditar = it
+                                        showAddSheet = true
+                                    },
+                                    onEliminar = {
+                                        productoParaEliminar = it
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -476,9 +530,9 @@ fun DetalleListaScreen(
             viewModel = viewModel,
             defaultTiendaId = defaultTiendaId,
             onDismiss = { showAddSheet = false },
-            onConfirm = { desc, precio, cant, tiendaId, barcode, categoria, unidad ->
+            onConfirm = { prodExistente, desc, precio, cant, tiendaId, barcode, categoria, unidad, onResult ->
                 viewModel.guardarProducto(
-                    productoParaEditar,
+                    prodExistente ?: productoParaEditar,
                     listaId,
                     tiendaId,
                     desc,
@@ -487,10 +541,12 @@ fun DetalleListaScreen(
                     listaActual,
                     barcode,
                     categoria,
-                    unidad
+                    unidad,
+                    onSuccess = { productoGuardado ->
+                        ultimoTiendaIdAgregado = tiendaId
+                        onResult(productoGuardado)
+                    }
                 )
-                ultimoTiendaIdAgregado = tiendaId
-                showAddSheet = false
             }
         )
     }
@@ -513,6 +569,139 @@ fun DetalleListaScreen(
             },
             dismissButton = {
                 TextButton(onClick = { productoParaEliminar = null }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    if (showEliminarSeleccionadosConfirm) {
+        val countSeleccionados = productos.count { it.seleccionado }
+        AlertDialog(
+            onDismissRequest = { showEliminarSeleccionadosConfirm = false },
+            title = { Text("Eliminar seleccionados") },
+            text = {
+                Text("¿Deseas eliminar $countSeleccionados ${if (countSeleccionados == 1) "producto seleccionado" else "productos seleccionados"} de la lista?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.eliminarSeleccionados(listaId, listaActual)
+                        showEliminarSeleccionadosConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEliminarSeleccionadosConfirm = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    if (tiendaParaTotalManual != null) {
+        val targetTienda = tiendaParaTotalManual!!
+        val tId = targetTienda.id
+        var inputMonto by remember(tiendaParaTotalManual) {
+            mutableStateOf(totalesTiendaMap[tId]?.toString() ?: "")
+        }
+        AlertDialog(
+            onDismissRequest = { tiendaParaTotalManual = null },
+            title = { Text("Total manual para ${targetTienda.nombre}") },
+            text = {
+                Column {
+                    Text("Ingresa el monto total de esta tienda para sobreescribir la suma automática de sus productos.")
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = inputMonto,
+                        onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) inputMonto = it },
+                        label = { Text("Monto Total ($)") },
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val m = inputMonto.toDoubleOrNull()
+                        viewModel.setTotalManualTienda(listaId, tId, m, listaActual)
+                        tiendaParaTotalManual = null
+                    }
+                ) {
+                    Text("Guardar Total")
+                }
+            },
+            dismissButton = {
+                Row {
+                    if (totalesTiendaMap[tId] != null) {
+                        TextButton(
+                            onClick = {
+                                viewModel.setTotalManualTienda(listaId, tId, null, listaActual)
+                                tiendaParaTotalManual = null
+                            }
+                        ) {
+                            Text("Suma automática")
+                        }
+                    }
+                    TextButton(onClick = { tiendaParaTotalManual = null }) {
+                        Text("Cancelar")
+                    }
+                }
+            }
+        )
+    }
+
+    if (showListaTotalManualDialog) {
+        var inputMonto by remember {
+            mutableStateOf(listaActual?.totalManual?.toString() ?: "")
+        }
+        AlertDialog(
+            onDismissRequest = { showListaTotalManualDialog = false },
+            title = { Text("Total manual de la Lista") },
+            text = {
+                Column {
+                    Text("Ingresa el monto total global para esta lista si deseas sobreescribir el cálculo general.")
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = inputMonto,
+                        onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) inputMonto = it },
+                        label = { Text("Monto Total ($)") },
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val m = inputMonto.toDoubleOrNull()
+                        viewModel.setTotalManualLista(listaActual, m)
+                        showListaTotalManualDialog = false
+                    }
+                ) {
+                    Text("Guardar Total")
+                }
+            },
+            dismissButton = {
+                Row {
+                    if (listaActual?.totalManual != null) {
+                        TextButton(
+                            onClick = {
+                                viewModel.setTotalManualLista(listaActual, null)
+                                showListaTotalManualDialog = false
+                            }
+                        ) {
+                            Text("Suma automática")
+                        }
+                    }
+                    TextButton(onClick = { showListaTotalManualDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
             }
         )
     }

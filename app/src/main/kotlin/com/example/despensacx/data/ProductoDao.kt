@@ -21,6 +21,9 @@ interface ProductoDao {
     @Delete
     suspend fun delete(producto: ProductoEntity)
 
+    @Query("DELETE FROM productos WHERE listaId = :listaId AND seleccionado = 1")
+    suspend fun deleteSeleccionadosByLista(listaId: Long)
+
     @Query("SELECT * FROM productos WHERE listaId = :listaId")
     fun getProductosByLista(listaId: Long): LiveData<List<ProductoEntity>>
 

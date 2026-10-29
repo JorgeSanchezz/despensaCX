@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.*
@@ -25,11 +27,13 @@ fun HeaderTienda(
     nombre: String, 
     color: String, 
     subtotal: Double,
+    totalManual: Double? = null,
     fotoTicket: TicketFotoEntity? = null,
     compactMode: Boolean = false,
     isCollapsed: Boolean = false,
     onToggleCollapse: () -> Unit = {},
-    onVerFoto: (TicketFotoEntity) -> Unit = {}
+    onVerFoto: (TicketFotoEntity) -> Unit = {},
+    onEditTotalManual: () -> Unit = {}
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
@@ -84,12 +88,36 @@ fun HeaderTienda(
             }
 
             if (!compactMode) {
-                Text(
-                    text = FormatUtils.formatCurrency(subtotal),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onEditTotalManual() }
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    if (totalManual != null) {
+                        Text(
+                            text = "✏️ " + FormatUtils.formatCurrency(totalManual),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Text(
+                            text = FormatUtils.formatCurrency(subtotal),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Editar total manual",
+                            tint = Color.Gray,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
             }
         }
     }

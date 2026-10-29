@@ -22,9 +22,10 @@ import java.util.concurrent.Executors
         ProductoEntity::class,
         CatalogoProducto::class,
         TicketFotoEntity::class,
-        MembresiaEntity::class
+        MembresiaEntity::class,
+        TiendaTotalEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -35,19 +36,22 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun catalogoDao(): CatalogoDao
     abstract fun ticketFotoDao(): TicketFotoDao
     abstract fun membresiaDao(): MembresiaDao
+    abstract fun tiendaTotalDao(): TiendaTotalDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
         val databaseWriteExecutor = Executors.newFixedThreadPool(4)
 
-        /**
-         * Lista centralizada de todas las migraciones manuales.
-         * Cuando realices un cambio en el esquema (ej. agregar columna), crea un objeto Migration
-         * y añádelo a este arreglo.
-         */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE listas ADD COLUMN totalManual REAL DEFAULT NULL")
+                db.execSQL("CREATE TABLE IF NOT EXISTS tienda_totales (listaId INTEGER NOT NULL, tiendaId INTEGER NOT NULL, totalManual REAL NOT NULL, PRIMARY KEY(listaId, tiendaId))")
+            }
+        }
+
         private val ALL_MIGRATIONS = arrayOf<Migration>(
-            // MIGRATION_6_7 // Ejemplo de migración futura
+            MIGRATION_7_8
         )
 
         @JvmStatic

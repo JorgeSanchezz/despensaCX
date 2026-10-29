@@ -11,5 +11,6 @@ data class ListaEntity(
     var fechaCreacion: String,
     var fechaModificacion: String,
     var archivada: Boolean,
-    var presupuestoMaximo: Double
+    var presupuestoMaximo: Double,
+    var totalManual: Double? = null
 )

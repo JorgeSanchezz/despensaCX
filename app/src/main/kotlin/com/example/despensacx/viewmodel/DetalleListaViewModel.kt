@@ -16,13 +16,34 @@ class DetalleListaViewModel @Inject constructor(
     private val productoDao: ProductoDao,
     private val tiendaDao: TiendaDao,
     private val catalogoDao: CatalogoDao,
-    private val ticketFotoDao: TicketFotoDao
+    private val ticketFotoDao: TicketFotoDao,
+    private val tiendaTotalDao: TiendaTotalDao
 ) : ViewModel() {
 
     fun getLista(id: Long): LiveData<ListaEntity> = listaDao.getById(id)
     fun getTiendas(): LiveData<List<TiendaEntity>> = tiendaDao.getAllTiendas()
     fun getProductos(listaId: Long): LiveData<List<ProductoEntity>> = productoDao.getProductosByLista(listaId)
     fun getTicketFotos(listaId: Long): LiveData<List<TicketFotoEntity>> = ticketFotoDao.getFotosByLista(listaId)
+    fun getTotalesTienda(listaId: Long): LiveData<List<TiendaTotalEntity>> = tiendaTotalDao.getTotalesByLista(listaId)
+
+    fun setTotalManualTienda(listaId: Long, tiendaId: Long, totalManual: Double?, lista: ListaEntity?) {
+        viewModelScope.launch {
+            if (totalManual != null) {
+                tiendaTotalDao.insertOrUpdate(TiendaTotalEntity(listaId, tiendaId, totalManual))
+            } else {
+                tiendaTotalDao.delete(listaId, tiendaId)
+            }
+            actualizarFechaModificacion(lista)
+        }
+    }
+
+    fun setTotalManualLista(lista: ListaEntity?, totalManual: Double?) {
+        viewModelScope.launch {
+            lista?.let {
+                listaDao.update(it.copy(totalManual = totalManual))
+            }
+        }
+    }
 
     fun guardarFotoTicket(listaId: Long, tiendaId: Long, path: String) {
         viewModelScope.launch {
@@ -61,10 +82,11 @@ class DetalleListaViewModel @Inject constructor(
         lista: ListaEntity?,
         barcode: String? = null,
         categoria: String = "GENERAL",
-        unidad: String = "PZA"
+        unidad: String = "PZA",
+        onSuccess: ((ProductoEntity) -> Unit)? = null
     ) {
         viewModelScope.launch {
-            if (productoExistente == null) {
+            val productoGuardado = if (productoExistente == null) {
                 val p = ProductoEntity(
                     listaId = listaId,
                     tiendaId = tiendaId,
@@ -76,7 +98,8 @@ class DetalleListaViewModel @Inject constructor(
                     categoria = categoria,
                     unidad = unidad
                 )
-                productoDao.insert(p)
+                val newId = productoDao.insert(p)
+                p.copy(id = newId)
             } else {
                 val p = productoExistente.copy(
                     descripcion = descripcion,
@@ -88,6 +111,7 @@ class DetalleListaViewModel @Inject constructor(
                     unidad = unidad
                 )
                 productoDao.update(p)
+                p
             }
 
             // Actualizar o insertar en el catálogo global si hay código de barras
@@ -96,12 +120,20 @@ class DetalleListaViewModel @Inject constructor(
             }
 
             actualizarFechaModificacion(lista)
+            onSuccess?.invoke(productoGuardado)
         }
     }
 
-    fun eliminarProducto(producto: ProductoEntity, lista: ListaEntity?) {
+    fun eliminarProducto(producto: ProductoEntity, lista: ListaEntity? = null) {
         viewModelScope.launch {
             productoDao.delete(producto)
+            actualizarFechaModificacion(lista)
+        }
+    }
+
+    fun eliminarSeleccionados(listaId: Long, lista: ListaEntity?) {
+        viewModelScope.launch {
+            productoDao.deleteSeleccionadosByLista(listaId)
             actualizarFechaModificacion(lista)
         }
     }
